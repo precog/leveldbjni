@@ -10,9 +10,9 @@ extern "C" {
 /*
  * Class:     org_fusesource_leveldbjni_internal_ChunkHelper
  * Method:    nextChunk
- * Signature: (JJ)[[[B
+ * Signature: (JJ)Lorg/fusesource/leveldbjni/internal/ChunkHelper/Chunk;
  */
-JNIEXPORT jobjectArray JNICALL Java_org_fusesource_leveldbjni_internal_ChunkHelper_nextChunk
+JNIEXPORT jobject JNICALL Java_org_fusesource_leveldbjni_internal_ChunkHelper_nextChunk
   (JNIEnv *, jclass, jlong, jlong);
 
 #ifdef __cplusplus

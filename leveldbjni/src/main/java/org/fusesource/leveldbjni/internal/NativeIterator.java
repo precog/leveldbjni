@@ -157,9 +157,9 @@ public class NativeIterator extends NativeObject {
         checkStatus();
     }
 
-    public byte[][][] nextChunk(long size) throws NativeDB.DBException {
+    public ChunkHelper.Chunk nextChunk(long size) throws NativeDB.DBException {
         assertAllocated();
-        byte[][][] retVal = ChunkHelper.nextChunk(self, size);
+        ChunkHelper.Chunk retVal = ChunkHelper.nextChunk(self, size);
         checkStatus();
         return retVal;
     }
