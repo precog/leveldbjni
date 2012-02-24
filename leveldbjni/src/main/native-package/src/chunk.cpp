@@ -145,7 +145,7 @@ jobject chunk_pairs(JNIEnv *env, void *iterPtr, jsize size) {
 #endif
 
   // Locate the proper class, constructor, etc
-  jclass chunkClazz = env->FindClass("org/fusesource/leveldbjni/internal/ChunkHelper$Chunk");
+  jclass chunkClazz = env->FindClass("org/fusesource/leveldbjni/KeyValueChunk");
   if (!chunkClazz) {
     std::cerr << "Could not locate chunk class!" << std::endl;
   }

@@ -34,7 +34,7 @@ package org.fusesource.leveldbjni.test;
 import junit.framework.TestCase;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.JniDBIterator;
-import org.fusesource.leveldbjni.internal.ChunkHelper.Chunk;
+import org.fusesource.leveldbjni.KeyValueChunk;
 import org.iq80.leveldb.*;
 import org.junit.Test;
 
@@ -165,11 +165,11 @@ public class DBTest extends TestCase {
         DBIterator iterator = db.iterator();
         iterator.seekToFirst();
         
-        Chunk chunk = ((JniDBIterator)iterator).nextChunk(10);
+        KeyValueChunk chunk = ((JniDBIterator)iterator).nextChunk(10);
 
-        assertEquals(3, chunk.size);
+        assertEquals(3, chunk.getSize());
 
-        for (int i = 0; i < chunk.size; ++i) {
+        for (int i = 0; i < chunk.getSize(); ++i) {
             actual.add(asString(chunk.keyAt(i)));
         }
         iterator.close();

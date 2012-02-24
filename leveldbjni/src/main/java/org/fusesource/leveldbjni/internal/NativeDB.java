@@ -162,6 +162,8 @@ public class NativeDB extends NativeObject {
     }
 
     public void delete() {
+        System.out.println(String.format("Deleting native DB 0x%8x", self));
+        Thread.dumpStack();
         assertAllocated();
         DBJNI.delete(self);
         self = 0;
@@ -303,8 +305,16 @@ public class NativeDB extends NativeObject {
         DBJNI.ReleaseSnapshot(self, snapshot.pointer());
     }
 
+    private static int iterCount = 0;
+
     public NativeIterator iterator(NativeReadOptions options) {
         checkArgNotNull(options, "options");
+        this.assertAllocated();
+        if (iterCount % 10000 == 0) {
+            System.out.println("Allocating iterator " + ++iterCount);
+        } else {
+            ++iterCount;
+        }
         return new NativeIterator(DBJNI.NewIterator(self, options));
     }
 

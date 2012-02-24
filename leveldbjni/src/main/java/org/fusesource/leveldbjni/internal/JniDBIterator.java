@@ -34,6 +34,8 @@ package org.fusesource.leveldbjni.internal;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.fusesource.leveldbjni.internal.NativeIterator;
 import org.fusesource.leveldbjni.internal.ChunkHelper;
+import org.fusesource.leveldbjni.KeyValueChunk;
+
 import org.iq80.leveldb.DBIterator;
 
 import java.util.AbstractMap;
@@ -105,7 +107,7 @@ public class JniDBIterator implements DBIterator {
         return rc;
     }
 
-    public ChunkHelper.Chunk nextChunk(int size) {
+    public KeyValueChunk nextChunk(int size) {
         try {
             return iterator.nextChunk(size);
         } catch (NativeDB.DBException e) {

@@ -31,6 +31,8 @@
  */
 package org.fusesource.leveldbjni.internal;
 
+import org.fusesource.leveldbjni.KeyValueChunk;
+
 import org.fusesource.hawtjni.runtime.*;
 
 import static org.fusesource.hawtjni.runtime.MethodFlag.*;
@@ -157,9 +159,9 @@ public class NativeIterator extends NativeObject {
         checkStatus();
     }
 
-    public ChunkHelper.Chunk nextChunk(long size) throws NativeDB.DBException {
+    public KeyValueChunk nextChunk(long size) throws NativeDB.DBException {
         assertAllocated();
-        ChunkHelper.Chunk retVal = ChunkHelper.nextChunk(self, size);
+        KeyValueChunk retVal = ChunkHelper.nextChunk(self, size);
         checkStatus();
         return retVal;
     }
