@@ -157,6 +157,13 @@ public class NativeIterator extends NativeObject {
         checkStatus();
     }
 
+    public byte[][][] nextChunk(long size) throws NativeDB.DBException {
+        assertAllocated();
+        byte[][][] retVal = ChunkHelper.nextChunk(self, size);
+        checkStatus();
+        return retVal;
+    }
+
     public void prev() throws NativeDB.DBException {
         assertAllocated();
         IteratorJNI.Prev(self);

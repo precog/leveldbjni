@@ -104,6 +104,14 @@ public class JniDBIterator implements DBIterator {
         return rc;
     }
 
+    public byte[][][] nextChunk(int size) {
+        try {
+            return iterator.nextChunk(size);
+        } catch (NativeDB.DBException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public boolean hasPrev() {
         if( !iterator.isValid() )
             return false;

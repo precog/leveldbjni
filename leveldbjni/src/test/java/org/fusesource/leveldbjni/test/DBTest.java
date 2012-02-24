@@ -33,6 +33,7 @@ package org.fusesource.leveldbjni.test;
 
 import junit.framework.TestCase;
 import org.fusesource.leveldbjni.JniDBFactory;
+import org.fusesource.leveldbjni.internal.JniDBIterator;
 import org.iq80.leveldb.*;
 import org.junit.Test;
 
@@ -134,6 +135,39 @@ public class DBTest extends TestCase {
         DBIterator iterator = db.iterator();
         for (iterator.seekToFirst(); iterator.hasNext(); iterator.next()) {
             actual.add(asString(iterator.peekNext().getKey()));
+        }
+        iterator.close();
+        assertEquals(expecting, actual);
+
+        db.close();
+    }
+
+    @Test
+    public void testChunk() throws IOException, DBException {
+
+        Options options = new Options().createIfMissing(true);
+
+        File path = getTestDirectory(getName());
+        DB db = factory.open(path, options);
+
+        db.put(bytes("Tampa"), bytes("green"));
+        db.put(bytes("London"), bytes("red"));
+        db.put(bytes("New York"), bytes("blue"));
+
+        ArrayList<String> expecting = new ArrayList<String>();
+        expecting.add("London");
+        expecting.add("New York");
+        expecting.add("Tampa");
+
+        ArrayList<String> actual = new ArrayList<String>();
+
+        DBIterator iterator = db.iterator();
+        iterator.seekToFirst();
+        
+        byte[][][] chunk = ((JniDBIterator)iterator).nextChunk(10);
+
+        for (int i = 0; i < 10 && chunk[i] != null; ++i) {
+            actual.add(asString(chunk[i][0]));
         }
         iterator.close();
         assertEquals(expecting, actual);
