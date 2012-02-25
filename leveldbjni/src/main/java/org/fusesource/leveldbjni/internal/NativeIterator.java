@@ -159,9 +159,9 @@ public class NativeIterator extends NativeObject {
         checkStatus();
     }
 
-    public KeyValueChunk nextChunk(long size) throws NativeDB.DBException {
+    public KeyValueChunk nextChunk(long maxByteSize) throws NativeDB.DBException {
         assertAllocated();
-        KeyValueChunk retVal = ChunkHelper.nextChunk(self, size);
+        KeyValueChunk retVal = ChunkHelper.nextChunk(self, maxByteSize);
         checkStatus();
         return retVal;
     }

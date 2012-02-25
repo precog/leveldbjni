@@ -165,7 +165,7 @@ public class DBTest extends TestCase {
         DBIterator iterator = db.iterator();
         iterator.seekToFirst();
         
-        KeyValueChunk chunk = ((JniDBIterator)iterator).nextChunk(10);
+        KeyValueChunk chunk = ((JniDBIterator)iterator).nextChunk(1000);
 
         assertEquals(3, chunk.getSize());
 

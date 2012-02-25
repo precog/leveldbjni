@@ -107,9 +107,14 @@ public class JniDBIterator implements DBIterator {
         return rc;
     }
 
-    public KeyValueChunk nextChunk(int size) {
+    /**
+     * Retrieve the next chunk of key/value pairs within the given size limit. Note that
+     * a byte array is allocated for keys and values separately, and an index array for each
+     * is also allocated, so memory usage will be from 2-4 times maxByteSize.
+     */
+    public KeyValueChunk nextChunk(int maxByteSize) {
         try {
-            return iterator.nextChunk(size);
+            return iterator.nextChunk(maxByteSize);
         } catch (NativeDB.DBException e) {
             throw new RuntimeException(e);
         }

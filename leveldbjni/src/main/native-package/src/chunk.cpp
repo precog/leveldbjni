@@ -5,7 +5,6 @@
 #include <list>
 
 #include "org_fusesource_leveldbjni_internal_ChunkHelper.h"
-#include "buffer_link.hpp"
 
 //#define DEBUG_CHUNKS 1
 
@@ -13,74 +12,91 @@
 extern "C" {
 #endif
 
-JNIEXPORT jobject JNICALL Java_org_fusesource_leveldbjni_internal_ChunkHelper_nextChunk
-(JNIEnv *env, jclass ignored, jlong iterPtr, jlong size) {
-  chunk_pairs(env, (void *)iterPtr, size);
-}
-
-
-jobject chunk_pairs(JNIEnv *env, void *iterPtr, jsize size) {
-  leveldb::Iterator *iter = (leveldb::Iterator *)iterPtr;
-  
-  // Need some temporary storage space, since we don't know how large our keys/values are
-  #define BUFFER_SIZE 16000
-  std::list<BufferLink *> keyList;
-  std::list<BufferLink *> valList;
-
-  int count = 0;
-  long totalKeySize = 0;
-  long totalValSize = 0;
-
-  BufferLink *currentKeyBuffer = new BufferLink(BUFFER_SIZE);
-  BufferLink *currentValBuffer = new BufferLink(BUFFER_SIZE);
-
-  jint *keyIndices = new jint[size];
-  jint *valIndices = new jint[size];
-
-#ifdef DEBUG_CHUNKS
-  std::cout << "Iterating" << std::endl;
-#endif
-
-  for (int i = 0; i < size && iter->Valid(); ++i) {
-    ++count;
-
-    leveldb::Slice ks = iter->key();
-    leveldb::Slice vs = iter->value();
-
-    // We need to allocate new buffers if we can't fit
-    if ((ks.size() + currentKeyBuffer->limit) > BUFFER_SIZE) {
-      keyList.push_back(currentKeyBuffer);
-      currentKeyBuffer = new BufferLink(BUFFER_SIZE);
-    }
-
-    if ((vs.size() + currentValBuffer->limit) > BUFFER_SIZE) {
-      valList.push_back(currentValBuffer);
-      currentValBuffer = new BufferLink(BUFFER_SIZE);
-    }
-
-    // Compact key and value onto the end of current buffers
-    keyIndices[i] = totalKeySize;
-    totalKeySize += ks.size();
-    memcpy((jbyte *)(currentKeyBuffer->contents + currentKeyBuffer->limit), ks.data(), ks.size());
-    currentKeyBuffer->limit += ks.size();
-
-    valIndices[i] = totalValSize;
-    totalValSize += vs.size();
-    memcpy((jbyte *)(currentValBuffer->contents + currentValBuffer->limit), vs.data(), vs.size());
-    currentValBuffer->limit += vs.size();
-    
-    iter->Next();
+  JNIEXPORT jobject JNICALL Java_org_fusesource_leveldbjni_internal_ChunkHelper_nextChunk
+  (JNIEnv *env, jclass ignored, jlong iterPtr, jlong size) {
+    chunk_pairs(env, (void *)iterPtr, size);
   }
 
-  // Push the final buffer onto our lists
-  keyList.push_back(currentKeyBuffer);
-  valList.push_back(currentValBuffer);
+
+  jobject chunk_pairs(JNIEnv *env, void *iterPtr, jsize maxByteSize) {
+    leveldb::Iterator *iter = (leveldb::Iterator *)iterPtr;
+  
+    int count = 0;
+    long totalKeySize = 0;
+    long totalValSize = 0;
+
+    jbyte *keyBuffer = NULL;
+    jbyte *valBuffer = NULL;
+
+    jint *keyIndices = NULL;
+    jint *valIndices = NULL;
+
+    try {
+      keyBuffer = new jbyte[maxByteSize];
+      valBuffer = new jbyte[maxByteSize];
+      keyIndices = new jint[maxByteSize];
+      valIndices = new jint[maxByteSize];
+    } catch (std::bad_alloc&) {
+      // Failed to allocate a buffer, we need to discard anything we've successfully allocated and throw a Java exception
+      if (keyBuffer != NULL) {
+        delete keyBuffer;
+      }
+      if (valBuffer != NULL) {
+        delete valBuffer;
+      }
+      if (keyIndices != NULL) {
+        delete keyIndices;
+      }
+      if (valIndices != NULL) {
+        delete valIndices;
+      }
+
+      jclass excClass = env->FindClass("java/lang/OutOfMemoryError");
+      if (excClass == NULL) {
+        std::cerr << "Failed to locate java.lang.OutOfMemoryError class on memory allocation failure!" << std::endl;
+        return NULL;
+      }
+      
+      env->ThrowNew(excClass, "Failed to allocate buffers");
+
+      return NULL;
+    }
+    
+#ifdef DEBUG_CHUNKS
+    std::cout << "Iterating" << std::endl;
+#endif
+
+    // We simply iterate as long as the iterator is valid. We do free space checks on our buffers later
+    for (int i = 0; iter->Valid(); ++i) {
+      leveldb::Slice ks = iter->key();
+      leveldb::Slice vs = iter->value();
+
+      // We have to stop if either key or value would exceed our chunk buffer
+      if ((ks.size() + totalKeySize) > maxByteSize || (vs.size() + totalValSize) > maxByteSize) {
+        break;
+      }
+
+      ++count;
+
+      // Compact key and value onto the end of current buffers
+      keyIndices[i] = totalKeySize;
+      memcpy((jbyte *)(keyBuffer + totalKeySize), ks.data(), ks.size());
+      totalKeySize += ks.size();
+
+      valIndices[i] = totalValSize;
+      memcpy((jbyte *)(valBuffer + totalValSize), vs.data(), vs.size());
+      totalValSize += vs.size();
+    
+      iter->Next();
+    }
 
   // Allocate our Java arrays
   jbyteArray keyValueJArray = env->NewByteArray(totalKeySize);
   jbyteArray valValueJArray = env->NewByteArray(totalValSize);
   jintArray keyIndexJArray = env->NewIntArray(count);
   jintArray valIndexJArray = env->NewIntArray(count);
+
+  // TODO: detect and deal with OutOfMemoryError here
 
 #ifdef DEBUG_CHUNKS
   std::cout << "Copying indices" << std::endl;
@@ -100,45 +116,20 @@ jobject chunk_pairs(JNIEnv *env, void *iterPtr, jsize size) {
   delete keyIndices;
   delete valIndices;
   
-  // Compact all of the key values together
-  int currentInsertPoint = 0;
-
 #ifdef DEBUG_CHUNKS
-  std::cout << "Compacting" << std::endl;
+  std::cout << "Copying data" << std::endl;
 #endif
+  
+  // Copy data
+  env->SetByteArrayRegion(keyValueJArray,
+                          0,
+                          totalKeySize,
+                          keyBuffer);
 
-  for (std::list<BufferLink *>::iterator it = keyList.begin(); it != keyList.end(); it++) {
-#ifdef DEBUG_CHUNKS
-    std::cout << "  compact key buffer: " << std::dec << (*it)->limit << " bytes at 0x" << std::hex << ((long)(*it)->contents) << std::endl;
-#endif
-    env->SetByteArrayRegion(keyValueJArray,
-                            currentInsertPoint,
-                            (*it)->limit,
-                            (jbyte *) (*it)->contents);
-
-    currentInsertPoint += (*it)->limit;
-
-    // Clean up the buffer at this point
-    delete (*it);
-  }
-
-  // Now compact values
-  currentInsertPoint = 0;
-
-  for (std::list<BufferLink *>::iterator it = valList.begin(); it != valList.end(); it++) {
-#ifdef DEBUG_CHUNKS
-    std::cout << "  compact val buffer: " << std::dec << (*it)->limit << " bytes at 0x" << std::hex << ((long)(*it)->contents) << std::endl;
-#endif
-    env->SetByteArrayRegion(valValueJArray,
-                            currentInsertPoint,
-                            (*it)->limit,
-                            (*it)->contents);
-
-    currentInsertPoint += (*it)->limit;
-
-    // Clean up the buffer at this point
-    delete (*it);
-  }
+  env->SetByteArrayRegion(valValueJArray,
+                          0,
+                          totalValSize,
+                          valBuffer);
 
 #ifdef DEBUG_CHUNKS
   std::cout << "Allocate return obj" << std::endl;
@@ -147,12 +138,21 @@ jobject chunk_pairs(JNIEnv *env, void *iterPtr, jsize size) {
   // Locate the proper class, constructor, etc
   jclass chunkClazz = env->FindClass("org/fusesource/leveldbjni/KeyValueChunk");
   if (!chunkClazz) {
-    std::cerr << "Could not locate chunk class!" << std::endl;
+    jclass classNotFoundExc = env->FindClass("java/lang/ClassNotFoundException");
+    if (classNotFoundExc == NULL) {
+      std::cerr << "Could not locate java.lang.ClassNotFoundException!" << std::endl;
+      return NULL;
+    }
+
+    env->ThrowNew(classNotFoundExc, "Could not locate org.fusesource.leveldbjni.KeyValueChunk");
+    
+    return NULL;
   }
 
   jmethodID constructorID = env->GetMethodID(chunkClazz, "<init>", "()V");
   if (!constructorID) {
     std::cerr << "Could not locate chunk constructor!" << std::endl;
+    return NULL;
   }
 
   jobject chunk = env->NewObject(chunkClazz, constructorID);
