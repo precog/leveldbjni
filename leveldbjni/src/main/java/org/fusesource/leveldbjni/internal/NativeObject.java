@@ -37,12 +37,19 @@ package org.fusesource.leveldbjni.internal;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-class NativeObject {
+abstract class NativeObject {
 
     protected long self;
 
+    private boolean clearSelfOnDelete;
+
     protected NativeObject(long self) {
+        this(self, true);
+    }
+
+    protected NativeObject(long self, boolean clearSelfOnDelete) {
         this.self = self;
+        this.clearSelfOnDelete = clearSelfOnDelete;
         if( self ==0 ) {
             throw new OutOfMemoryError("Failure allocating native heap memory");
         }
@@ -55,9 +62,24 @@ class NativeObject {
     public boolean isAllocated() {
         return self !=0;
     }
-
-    protected void assertAllocated() {
-        assert isAllocated() : "This object has been deleted";
+    
+    // Assert is disabled by default at runtime, which means we end up just segfaulting. Use an exception instead
+    protected void assertAllocated() throws IllegalStateException {
+        if (! isAllocated()) {
+            throw new IllegalStateException("This object has been deleted");
+        }
     }
 
+    public final void delete() {
+        // Delete is idempotent
+        if (isAllocated()) {
+            doRealDelete();
+
+            if (clearSelfOnDelete) {
+                self = 0;
+            }
+        }
+    }
+
+    protected abstract void doRealDelete();
 }
