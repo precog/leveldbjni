@@ -41,7 +41,7 @@ public class KeyValueChunk {
         this.valueWidth = valueWidth;
     }
 
-    public class KeyValuePair {
+    public static class KeyValuePair {
         private byte[] key;
         private byte[] value;
 
@@ -78,13 +78,11 @@ public class KeyValueChunk {
 
                 int keyLen = keyWidth.getWidth(backing);
                 byte[] key = new byte[keyLen];
-                System.arraycopy(data, backing.position(), key, 0, keyLen);
-                backing.position(backing.position() + keyLen);
+                backing.get(key, 0, keyLen);
                 
                 int valueLen = valueWidth.getWidth(backing);
                 byte[] value = new byte[valueLen];
-                System.arraycopy(data, backing.position(), value, 0, valueLen);
-                backing.position(backing.position() + valueLen);
+                backing.get(value, 0, valueLen);
 
                 return new KeyValuePair(key, value);
             }
