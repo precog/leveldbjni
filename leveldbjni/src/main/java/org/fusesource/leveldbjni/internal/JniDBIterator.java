@@ -33,7 +33,7 @@ package org.fusesource.leveldbjni.internal;
 
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.fusesource.leveldbjni.internal.NativeIterator;
-import org.fusesource.leveldbjni.internal.ChunkHelper;
+import org.fusesource.leveldbjni.DataWidth;
 import org.fusesource.leveldbjni.KeyValueChunk;
 
 import org.iq80.leveldb.DBIterator;
@@ -108,13 +108,12 @@ public class JniDBIterator implements DBIterator {
     }
 
     /**
-     * Retrieve the next chunk of key/value pairs within the given size limit. Note that
-     * a byte array is allocated for keys and values separately, and an index array for each
-     * is also allocated, so memory usage will be from 2-4 times maxByteSize.
+     * Retrieve the next chunk of key/value pairs into the given buffer, using
+     * the provided key/value encodings.
      */
-    public KeyValueChunk nextChunk(int maxByteSize) {
+    public KeyValueChunk nextChunk(byte[] buffer, DataWidth keyWidth, DataWidth valWidth) {
         try {
-            return iterator.nextChunk(maxByteSize);
+            return iterator.nextChunk(buffer, keyWidth, valWidth);
         } catch (NativeDB.DBException e) {
             throw new RuntimeException(e);
         }

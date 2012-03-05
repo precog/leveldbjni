@@ -31,6 +31,7 @@
  */
 package org.fusesource.leveldbjni.internal;
 
+import org.fusesource.leveldbjni.DataWidth;
 import org.fusesource.leveldbjni.KeyValueChunk;
 
 import org.fusesource.hawtjni.runtime.*;
@@ -102,6 +103,24 @@ public class NativeIterator extends NativeObject {
         static final native long status(
                 long self
                 );
+
+        @JniMethod(accessor="chunk_pairs")
+        static final native void nextChunk(
+                @JniArg(cast = "void *") long self,
+                ChunkMetadata meta,
+                int maxByteSize,
+                @JniArg(cast = "char *", flags={CRITICAL}) byte[] buffer,
+                boolean encodeKeys,
+                boolean encodeVals,
+                int keyWidth,
+                int valWidth
+                );
+    }
+
+    @JniClass(flags={STRUCT})
+    public static class ChunkMetadata {
+        public int byteLength;
+        public int pairLength;
     }
 
     NativeIterator(long self) {
@@ -157,9 +176,18 @@ public class NativeIterator extends NativeObject {
         checkStatus();
     }
 
-    public KeyValueChunk nextChunk(long maxByteSize) throws NativeDB.DBException {
+    public KeyValueChunk nextChunk(byte[] buffer, DataWidth keyWidth, DataWidth valWidth) throws NativeDB.DBException {
         assertAllocated();
-        KeyValueChunk retVal = ChunkHelper.nextChunk(self, maxByteSize);
+        ChunkMetadata meta = new ChunkMetadata();
+        IteratorJNI.nextChunk(self,
+                              meta,
+                              buffer.length,
+                              buffer,
+                              keyWidth.isRunLengthEncoded(),
+                              valWidth.isRunLengthEncoded(),
+                              keyWidth.getEncodingWidth(),
+                              valWidth.getEncodingWidth());
+        KeyValueChunk retVal = new KeyValueChunk(buffer, meta.byteLength, meta.pairLength, keyWidth, valWidth);
         checkStatus();
         return retVal;
     }

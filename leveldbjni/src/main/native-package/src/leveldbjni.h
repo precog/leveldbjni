@@ -134,7 +134,12 @@ extern "C" {
 
 void buffer_copy(const void *source, size_t source_pos, void *dest, size_t dest_pos, size_t length);
 
-jobject chunk_pairs(JNIEnv *env, void *iterPtr, jsize size);
+struct ChunkMetadata {
+  int byteLength;
+  int pairLength;
+};
+
+void chunk_pairs(void *iterPtr, struct ChunkMetadata* meta, int maxByteSize, char* buffer, int encodeKeys, int encodeVals, int keyWidth, int valWidth);
 
 #ifdef __cplusplus
 } /* extern "C" */
