@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, FuseSource Corp.  All rights reserved.
+ * Copyright (C) 2011-2012, FuseSource Corp.  All rights reserved.
  *
  *     http://fusesource.com
  *
@@ -63,21 +63,19 @@ abstract class NativeObject {
         return self !=0;
     }
     
-    // Assert is disabled by default at runtime, which means we end up just segfaulting. Use an exception instead
-    protected void assertAllocated() throws IllegalStateException {
+    // "assert" is disabled by default at runtime, which means we end up just segfaulting. Use an Error instead
+    protected void assertAllocated() {
         if (! isAllocated()) {
-            throw new IllegalStateException("This object has been deleted");
+            throw new AssertionError("This object has been deleted");
         }
     }
 
     public final void delete() {
-        // Delete is idempotent
-        if (isAllocated()) {
-            doRealDelete();
+        assertAllocated();
+        doRealDelete();
 
-            if (clearSelfOnDelete) {
-                self = 0;
-            }
+        if (clearSelfOnDelete) {
+            self = 0;
         }
     }
 

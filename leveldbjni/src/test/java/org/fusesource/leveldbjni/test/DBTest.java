@@ -41,6 +41,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 import static org.fusesource.leveldbjni.JniDBFactory.asString;
@@ -166,7 +167,7 @@ public class DBTest extends TestCase {
         DBIterator iterator = db.iterator();
         iterator.seekToFirst();
 
-        byte[] buffer = new byte[1000];
+        ByteBuffer buffer = ByteBuffer.allocate(1000);
         
         KeyValueChunk chunk = ((JniDBIterator)iterator).nextChunk(buffer, DataWidth.VARIABLE, DataWidth.VARIABLE);
 

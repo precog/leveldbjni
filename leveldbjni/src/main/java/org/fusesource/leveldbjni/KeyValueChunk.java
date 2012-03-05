@@ -1,3 +1,34 @@
+/*
+ * Copyright (C) 2012, FuseSource Corp.  All rights reserved.
+ *
+ *     http://fusesource.com
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ *    * Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *    * Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following disclaimer
+ * in the documentation and/or other materials provided with the
+ * distribution.
+ *    * Neither the name of FuseSource Corp. nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 package org.fusesource.leveldbjni;
 
 import java.nio.ByteBuffer;
@@ -14,28 +45,23 @@ import java.util.NoSuchElementException;
  * all members are public to allow for optimal performance in
  * use cases that can directly consume the byte stream.
  *
- * Data is either run-length-encoded or fixed-width key/value pairs. If run-length encoded,
- * lengths are 32 bit, big-endian Integers,
- * e.g. 32-bit length, key bytes, 32-bit length, value bytes, ...
- * or  fixed-width key bytes, 32-bit length, value bytes, etc
- *
+ * Key and value Data is encoded into the buffer based on selectable encodings.
  */
 public class KeyValueChunk {
-    // How many bytes of the buffer are actually used
-    public int byteLength;
-
-    // How many pairs are contained in this chunk
+    /** The number of pairs contained in this chunk */
     public int pairLength;
 
-    // Encodings
+    /** The encoding to use for key data extraction */
     public DataWidth keyWidth;
+
+    /** The encoding to use for value data extraction */
     public DataWidth valueWidth;
 
-    public byte[] data;
+    /** The backing store */
+    public ByteBuffer data;
 
-    public KeyValueChunk(byte[] data, int byteLength, int pairLength, DataWidth keyWidth, DataWidth valueWidth) {
+    public KeyValueChunk(ByteBuffer data, int pairLength, DataWidth keyWidth, DataWidth valueWidth) {
         this.data = data;
-        this.byteLength = byteLength;
         this.pairLength = pairLength;
         this.keyWidth = keyWidth;
         this.valueWidth = valueWidth;
@@ -65,7 +91,7 @@ public class KeyValueChunk {
 
     public Iterator<KeyValuePair> getIterator() {
         return new Iterator<KeyValuePair>() {
-            private ByteBuffer backing = ByteBuffer.wrap(data, 0, byteLength);
+            private ByteBuffer backing = data.asReadOnlyBuffer();
 
             public boolean hasNext() {
                 return backing.hasRemaining();

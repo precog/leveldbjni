@@ -31,6 +31,8 @@
  */
 package org.fusesource.leveldbjni.internal;
 
+import java.nio.ByteBuffer;
+
 import org.fusesource.leveldbjni.DataWidth;
 import org.fusesource.leveldbjni.KeyValueChunk;
 
@@ -176,18 +178,28 @@ public class NativeIterator extends NativeObject {
         checkStatus();
     }
 
-    public KeyValueChunk nextChunk(byte[] buffer, DataWidth keyWidth, DataWidth valWidth) throws NativeDB.DBException {
+    /**
+     * Consume the next chunk of key/value pairs into the specified buffer. The buffer will be cleared prior
+     * to the read, and on return will have position == 0, limit = total bytes read.
+     *
+     * @param buffer The buffer to read the chunk into
+     * @param keyWidth The encoding to use for key data
+     * @param valWidth The encoding to use for value data
+     */
+    public KeyValueChunk nextChunk(ByteBuffer buffer, DataWidth keyWidth, DataWidth valWidth) throws NativeDB.DBException {
         assertAllocated();
         ChunkMetadata meta = new ChunkMetadata();
+        buffer.clear();
         IteratorJNI.nextChunk(self,
                               meta,
-                              buffer.length,
-                              buffer,
+                              buffer.capacity(),
+                              buffer.array(),
                               keyWidth.isRunLengthEncoded(),
                               valWidth.isRunLengthEncoded(),
                               keyWidth.getEncodingWidth(),
                               valWidth.getEncodingWidth());
-        KeyValueChunk retVal = new KeyValueChunk(buffer, meta.byteLength, meta.pairLength, keyWidth, valWidth);
+        buffer.limit(meta.byteLength);
+        KeyValueChunk retVal = new KeyValueChunk(buffer, meta.pairLength, keyWidth, valWidth);
         checkStatus();
         return retVal;
     }

@@ -6,8 +6,6 @@
 
 #include <arpa/inet.h>
 
-#include "org_fusesource_leveldbjni_internal_ChunkHelper.h"
-
 //#define DEBUG_CHUNKS 1
 
 #ifdef __cplusplus
